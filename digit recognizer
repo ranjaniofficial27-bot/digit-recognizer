@@ -1,0 +1,133 @@
+HANDWRITTEN DIGIT RECOGNIZER
+TRAIN_MODEL.PY
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.utils import to_categorical
+from sklearn.metrics import confusion_matrix
+
+
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+
+x_train = x_train.reshape(-1, 28, 28, 1).astype("float32") / 255.0
+x_test = x_test.reshape(-1, 28, 28, 1).astype("float32") / 255.0
+y_train = to_categorical(y_train, 10)
+y_test = to_categorical(y_test, 10)
+
+
+model = Sequential([
+    Conv2D(32, kernel_size=(3,3), activation="relu", input_shape=(28,28,1)),
+    MaxPooling2D(pool_size=(2,2)),
+    Conv2D(64, kernel_size=(3,3), activation="relu"),
+    MaxPooling2D(pool_size=(2,2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(10, activation="softmax")
+])
+
+
+model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
+
+
+history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=5, batch_size=128)
+
+
+test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+print(f" Test Accuracy: {test_acc*100:.2f}%")
+
+
+y_pred = model.predict(x_test)
+y_pred_classes = np.argmax(y_pred, axis=1)
+y_true = np.argmax(y_test, axis=1)
+
+cm = confusion_matrix(y_true, y_pred_classes)
+plt.figure(figsize=(8,6))
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted")
+plt.ylabel("True")
+plt.show()
+
+
+plt.plot(history.history["accuracy"], label="Train Acc")
+plt.plot(history.history["val_accuracy"], label="Val Acc")
+plt.title("Model Accuracy")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.show()
+  
+
+
+
+
+
+
+APP_TKINTER.PY
+
+
+import tkinter as tk
+import numpy as np
+from PIL import ImageGrab
+import tensorflow as tf
+
+
+model = tf.keras.models.load_model("digit_model.h5")
+
+
+window = tk.Tk()
+window.title("Real-Time Digit Recognizer")
+
+
+canvas = tk.Canvas(window, width=200, height=200, bg="white")
+canvas.pack()
+
+
+def draw(event):
+    x, y = event.x, event.y
+    canvas.create_oval(x, y, x+8, y+8, fill="black")
+
+canvas.bind("<B1-Motion>", draw)
+
+
+def predict_digit():
+    # Capture canvas as image
+    x = window.winfo_rootx() + canvas.winfo_x()
+    y = window.winfo_rooty() + canvas.winfo_y()
+    x1 = x + canvas.winfo_width()
+    y1 = y + canvas.winfo_height()
+    img = ImageGrab.grab().crop((x, y, x1, y1))
+
+   
+    img = img.resize((28,28)).convert("L")
+    img = np.array(img)
+    img = img.reshape(1,28,28,1).astype("float32")/255.0
+
+    
+    pred = model.predict(img)
+    digit = np.argmax(pred)
+    confidence = np.max(pred)
+
+    result_label.config(text=f"Prediction: {digit} (Confidence: {confidence:.2f})")
+
+
+predict_btn = tk.Button(window, text="Predict", command=predict_digit)
+predict_btn.pack()
+
+result_label = tk.Label(window, text="Draw a digit and click Predict")
+result_label.pack()
+
+
+def clear_canvas():
+    canvas.delete("all")
+
+clear_btn = tk.Button(window, text="Clear", command=clear_canvas)
+clear_btn.pack()
+
+window.mainloop()
+
+ 
