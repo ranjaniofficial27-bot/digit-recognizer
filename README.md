@@ -75,5 +75,3 @@ Developed by **Ranjani**
 ```
 
 
- Classifier + Digit Recognizer) so you can showcase them together in one polished update?
-
